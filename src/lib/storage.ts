@@ -105,6 +105,42 @@ export function getMonthlyTotals(): DailyData[] {
   return Array.from(months.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
 
+export function getMinuteTotals(): DailyData[] {
+  const entries = getEntries();
+  const map = new Map<string, DailyData>();
+
+  for (const e of entries) {
+    const dt = new Date(e.timestamp);
+    const key = `${dt.toISOString().split("T")[0]} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+    if (!map.has(key)) {
+      map.set(key, { date: key, total: 0, car: 0, phone: 0, laptop: 0, food: 0 });
+    }
+    const d = map.get(key)!;
+    d[e.category] += e.cost;
+    d.total += e.cost;
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function getHourlyTotals(): DailyData[] {
+  const entries = getEntries();
+  const map = new Map<string, DailyData>();
+
+  for (const e of entries) {
+    const dt = new Date(e.timestamp);
+    const key = `${dt.toISOString().split("T")[0]} ${String(dt.getHours()).padStart(2, "0")}:00`;
+    if (!map.has(key)) {
+      map.set(key, { date: key, total: 0, car: 0, phone: 0, laptop: 0, food: 0 });
+    }
+    const d = map.get(key)!;
+    d[e.category] += e.cost;
+    d.total += e.cost;
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export function getTodayTotal(): number {
   const today = getTodayString();
   return getEntries()
