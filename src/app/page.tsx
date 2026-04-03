@@ -10,6 +10,7 @@ import {
   getTodayTotal,
   getTodayCount,
 } from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
 import ExpenseButtons from "@/components/ExpenseButtons";
 import Charts from "@/components/Charts";
 
@@ -26,11 +27,14 @@ export default function Home() {
     setLoading(false);
   }, []);
 
-  // Fetch on mount + subscribe to realtime changes
+  // Fetch on mount + subscribe to realtime changes + polling fallback
   useEffect(() => {
     loadData();
-    const channel = subscribeToChanges(() => loadData());
-    return () => { channel.unsubscribe(); };
+    const { channel, interval } = subscribeToChanges(() => loadData());
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, [loadData]);
 
   const CATEGORY_COLORS: Record<Category, string> = {

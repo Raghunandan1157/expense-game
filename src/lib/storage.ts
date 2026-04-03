@@ -52,14 +52,19 @@ export async function addExpense(
 }
 
 export function subscribeToChanges(onUpdate: () => void) {
-  return supabase
+  const channel = supabase
     .channel("expenses-realtime")
     .on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "expenses" },
+      { event: "INSERT", schema: "public", table: "expenses" },
       () => onUpdate()
     )
     .subscribe();
+
+  // Polling fallback every 5s in case realtime hiccups
+  const interval = setInterval(onUpdate, 5000);
+
+  return { channel, interval };
 }
 
 // --- Pure helpers ---
