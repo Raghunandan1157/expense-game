@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   LineChart,
   Line,
@@ -10,6 +11,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  Area,
+  AreaChart,
 } from "recharts";
 import { DailyData } from "@/lib/types";
 import {
@@ -25,6 +28,58 @@ import {
 
 type View = "weekly" | "monthly";
 
+const tooltipStyle = {
+  background: "rgba(5, 8, 15, 0.95)",
+  border: "1px solid rgba(0, 255, 170, 0.15)",
+  borderRadius: "12px",
+  color: "#e0e6f0",
+  fontFamily: "var(--font-rajdhani)",
+  fontSize: "14px",
+  padding: "10px 14px",
+  boxShadow: "0 0 20px rgba(0, 255, 170, 0.1)",
+};
+
+const axisTickStyle = { fill: "rgba(255,255,255,0.25)", fontSize: 11, fontFamily: "var(--font-orbitron)" };
+
+function ChartCard({
+  title,
+  badge,
+  children,
+  delay = 0,
+}: {
+  title: string;
+  badge?: string;
+  children: React.ReactNode;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.5, ease: "easeOut" }}
+      className="glass-card rounded-2xl p-5 relative overflow-hidden"
+    >
+      {/* Top accent bar */}
+      <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-[#00ffaa]/30 to-transparent" />
+
+      <div className="flex items-center gap-3 mb-5">
+        <h3
+          className="text-sm font-bold tracking-[0.2em] uppercase text-white/50"
+          style={{ fontFamily: "var(--font-orbitron)" }}
+        >
+          {title}
+        </h3>
+        {badge && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-[#ffbe0b]/10 text-[#ffbe0b] border border-[#ffbe0b]/20">
+            {badge}
+          </span>
+        )}
+      </div>
+      {children}
+    </motion.div>
+  );
+}
+
 export default function Charts({ refreshKey }: { refreshKey: number }) {
   const [view, setView] = useState<View>("weekly");
 
@@ -32,202 +87,168 @@ export default function Charts({ refreshKey }: { refreshKey: number }) {
   const weekly = getWeeklyTotals();
   const monthly = getMonthlyTotals();
 
-  // Build chart data with predictions
   let chartData: (DailyData & { predicted?: number })[] = [];
 
   if (view === "weekly") {
     const predictions = getWeeklyPrediction(weekly, 4);
     chartData = [
       ...weekly.map((w) => ({ ...w, predicted: undefined })),
-      ...predictions.map((p) => ({
-        ...p,
-        total: 0,
-        predicted: p.total,
-      })),
+      ...predictions.map((p) => ({ ...p, total: 0, predicted: p.total })),
     ];
   } else {
     const predictions = getMonthlyPrediction(monthly, 3);
     chartData = [
       ...monthly.map((m) => ({ ...m, predicted: undefined })),
-      ...predictions.map((p) => ({
-        ...p,
-        total: 0,
-        predicted: p.total,
-      })),
+      ...predictions.map((p) => ({ ...p, total: 0, predicted: p.total })),
     ];
   }
 
-  // Also show daily prediction line
   const dailyPredictions = predictNextValues(daily, 7);
-
   const hasData = daily.length > 0;
 
   return (
     <div className="space-y-6" key={refreshKey}>
       {/* View toggle */}
       <div className="flex gap-2">
-        <button
-          onClick={() => setView("weekly")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-            view === "weekly"
-              ? "bg-emerald-500 text-white"
-              : "bg-white/5 text-white/60 hover:bg-white/10"
-          }`}
-        >
-          Weekly
-        </button>
-        <button
-          onClick={() => setView("monthly")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-            view === "monthly"
-              ? "bg-emerald-500 text-white"
-              : "bg-white/5 text-white/60 hover:bg-white/10"
-          }`}
-        >
-          Monthly
-        </button>
+        {(["weekly", "monthly"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`relative rounded-lg px-5 py-2 text-xs font-bold tracking-[0.15em] uppercase transition-all duration-300
+              ${
+                view === v
+                  ? "text-[#00ffaa]"
+                  : "text-white/30 hover:text-white/60"
+              }`}
+            style={{ fontFamily: "var(--font-orbitron)" }}
+          >
+            {view === v && (
+              <motion.div
+                layoutId="tab-bg"
+                className="absolute inset-0 rounded-lg bg-[#00ffaa]/10 border border-[#00ffaa]/20"
+                transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+              />
+            )}
+            <span className="relative z-10">{v}</span>
+          </button>
+        ))}
       </div>
 
       {!hasData ? (
-        <div className="flex h-64 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-          <p className="text-white/40">
-            Start spending to see your charts here
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex h-72 flex-col items-center justify-center gap-4 glass-card rounded-2xl"
+        >
+          <div className="w-16 h-16 rounded-full border border-white/5 flex items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(0,255,170,0.3)" strokeWidth="1.5">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+          </div>
+          <p className="text-white/25 text-sm tracking-wider uppercase" style={{ fontFamily: "var(--font-orbitron)" }}>
+            Awaiting data input
           </p>
-        </div>
+          <p className="text-white/15 text-xs">Log expenses above to generate analytics</p>
+        </motion.div>
       ) : (
         <>
-          {/* Main spending chart */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h3 className="mb-4 text-sm font-medium text-white/60">
-              {view === "weekly" ? "Weekly" : "Monthly"} Spending
-              {chartData.some((d) => d.predicted !== undefined) &&
-                " (with prediction)"}
-            </h3>
+          {/* Main spending chart with area fill */}
+          <ChartCard
+            title={`${view} Spending`}
+            badge={chartData.some((d) => d.predicted !== undefined) ? "AI Forecast" : undefined}
+            delay={0.1}
+          >
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis
-                  dataKey="date"
-                  stroke="#666"
-                  tick={{ fill: "#888", fontSize: 12 }}
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#00ffaa" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#00ffaa" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradAmber" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ffbe0b" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#ffbe0b" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="date" stroke="transparent" tick={axisTickStyle} />
+                <YAxis stroke="transparent" tick={axisTickStyle} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value, name) => [`₹${value}`, `${name}`]} />
+                <Legend
+                  wrapperStyle={{ fontFamily: "var(--font-orbitron)", fontSize: 10, letterSpacing: "0.1em" }}
                 />
-                <YAxis stroke="#666" tick={{ fill: "#888", fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "#1a1a2e",
-                    border: "1px solid #333",
-                    borderRadius: "8px",
-                    color: "#fff",
-                  }}
-                  formatter={(value, name) => [`₹${value}`, `${name}`]}
-                />
-                <Legend />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="total"
-                  stroke="#10b981"
+                  stroke="#00ffaa"
                   strokeWidth={2}
-                  dot={{ fill: "#10b981", r: 4 }}
+                  fill="url(#gradGreen)"
+                  dot={{ fill: "#00ffaa", r: 3, strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: "#00ffaa", stroke: "#05080f", strokeWidth: 2 }}
                   name="Actual"
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="predicted"
-                  stroke="#f59e0b"
+                  stroke="#ffbe0b"
                   strokeWidth={2}
-                  strokeDasharray="8 4"
-                  dot={{ fill: "#f59e0b", r: 4 }}
+                  strokeDasharray="6 4"
+                  fill="url(#gradAmber)"
+                  dot={{ fill: "#ffbe0b", r: 3, strokeWidth: 0 }}
                   name="Predicted"
                   connectNulls={false}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </ChartCard>
 
-          {/* Category breakdown chart */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h3 className="mb-4 text-sm font-medium text-white/60">
-              Category Breakdown ({view === "weekly" ? "Weekly" : "Monthly"})
-            </h3>
+          {/* Category breakdown */}
+          <ChartCard title="Category Breakdown" delay={0.2}>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={view === "weekly" ? weekly : monthly}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis
-                  dataKey="date"
-                  stroke="#666"
-                  tick={{ fill: "#888", fontSize: 12 }}
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="date" stroke="transparent" tick={axisTickStyle} />
+                <YAxis stroke="transparent" tick={axisTickStyle} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value, name) => [`₹${value}`, `${name}`]} />
+                <Legend
+                  wrapperStyle={{ fontFamily: "var(--font-orbitron)", fontSize: 10, letterSpacing: "0.1em" }}
                 />
-                <YAxis stroke="#666" tick={{ fill: "#888", fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "#1a1a2e",
-                    border: "1px solid #333",
-                    borderRadius: "8px",
-                    color: "#fff",
-                  }}
-                  formatter={(value, name) => [`₹${value}`, `${name}`]}
-                />
-                <Legend />
-                <Line type="monotone" dataKey="car" stroke="#ef4444" strokeWidth={2} name="Car ₹50" />
-                <Line type="monotone" dataKey="phone" stroke="#3b82f6" strokeWidth={2} name="Phone ₹10" />
-                <Line type="monotone" dataKey="laptop" stroke="#8b5cf6" strokeWidth={2} name="Laptop ₹20" />
-                <Line type="monotone" dataKey="food" stroke="#f97316" strokeWidth={2} name="Food ₹1" />
+                <Line type="monotone" dataKey="car" stroke="#ff006e" strokeWidth={2} dot={{ r: 3, strokeWidth: 0, fill: "#ff006e" }} name="Car ₹50" />
+                <Line type="monotone" dataKey="phone" stroke="#00d4ff" strokeWidth={2} dot={{ r: 3, strokeWidth: 0, fill: "#00d4ff" }} name="Phone ₹10" />
+                <Line type="monotone" dataKey="laptop" stroke="#a855f7" strokeWidth={2} dot={{ r: 3, strokeWidth: 0, fill: "#a855f7" }} name="Laptop ₹20" />
+                <Line type="monotone" dataKey="food" stroke="#ffbe0b" strokeWidth={2} dot={{ r: 3, strokeWidth: 0, fill: "#ffbe0b" }} name="Food ₹1" />
               </LineChart>
             </ResponsiveContainer>
-          </div>
+          </ChartCard>
 
           {/* Daily prediction */}
           {dailyPredictions.length > 0 && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <h3 className="mb-4 text-sm font-medium text-white/60">
-                Next 7 Days Prediction
-              </h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart
+            <ChartCard title="7-Day Forecast" badge="Predictive" delay={0.3}>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart
                   data={[
                     ...daily.slice(-7).map((d) => ({ ...d, predicted: undefined })),
-                    ...dailyPredictions.map((p) => ({
-                      ...p,
-                      total: 0,
-                      predicted: p.total,
-                    })),
+                    ...dailyPredictions.map((p) => ({ ...p, total: 0, predicted: p.total })),
                   ]}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis
-                    dataKey="date"
-                    stroke="#666"
-                    tick={{ fill: "#888", fontSize: 12 }}
+                  <defs>
+                    <linearGradient id="gradGreen2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#00ffaa" stopOpacity={0.15} />
+                      <stop offset="100%" stopColor="#00ffaa" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                  <XAxis dataKey="date" stroke="transparent" tick={axisTickStyle} />
+                  <YAxis stroke="transparent" tick={axisTickStyle} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(value, name) => [`₹${value}`, `${name}`]} />
+                  <Legend
+                    wrapperStyle={{ fontFamily: "var(--font-orbitron)", fontSize: 10, letterSpacing: "0.1em" }}
                   />
-                  <YAxis stroke="#666" tick={{ fill: "#888", fontSize: 12 }} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#1a1a2e",
-                      border: "1px solid #333",
-                      borderRadius: "8px",
-                      color: "#fff",
-                    }}
-                    formatter={(value, name) => [`₹${value}`, `${name}`]}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="total"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    name="Actual"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="predicted"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    strokeDasharray="8 4"
-                    name="Predicted"
-                  />
-                </LineChart>
+                  <Area type="monotone" dataKey="total" stroke="#00ffaa" strokeWidth={2} fill="url(#gradGreen2)" name="Actual" />
+                  <Area type="monotone" dataKey="predicted" stroke="#ffbe0b" strokeWidth={2} strokeDasharray="6 4" fill="url(#gradAmber)" name="Predicted" />
+                </AreaChart>
               </ResponsiveContainer>
-            </div>
+            </ChartCard>
           )}
         </>
       )}
