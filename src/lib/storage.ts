@@ -1,40 +1,12 @@
 import { ExpenseEntry, Category, CATEGORIES, DailyData } from "./types";
 import { supabase } from "./supabase";
 
-const USER_CODE_KEY = "expense-game-user-code";
-
-// --- User code management ---
-
-function generateCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
-}
-
-export function getUserCode(): string {
-  if (typeof window === "undefined") return "";
-  let code = localStorage.getItem(USER_CODE_KEY);
-  if (!code) {
-    code = generateCode();
-    localStorage.setItem(USER_CODE_KEY, code);
-  }
-  return code;
-}
-
-export function setUserCode(code: string) {
-  localStorage.setItem(USER_CODE_KEY, code.toUpperCase().trim());
-}
-
 // --- Supabase operations ---
 
-export async function fetchEntries(userCode: string): Promise<ExpenseEntry[]> {
+export async function fetchEntries(): Promise<ExpenseEntry[]> {
   const { data, error } = await supabase
     .from("expenses")
     .select("*")
-    .eq("user_code", userCode)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -52,21 +24,16 @@ export async function fetchEntries(userCode: string): Promise<ExpenseEntry[]> {
 
 export async function addExpense(
   category: Category,
-  userCode: string,
   entries: ExpenseEntry[]
 ): Promise<ExpenseEntry | null> {
-  // Check daily limit from current entries
   if (!canUseCategory(category, entries)) return null;
-
-  const now = new Date().toISOString();
 
   const { data, error } = await supabase
     .from("expenses")
     .insert({
-      user_code: userCode,
+      user_code: "shared",
       category,
       cost: CATEGORIES[category].cost,
-      created_at: now,
     })
     .select()
     .single();
@@ -84,7 +51,18 @@ export async function addExpense(
   };
 }
 
-// --- Pure helpers (work on in-memory entries array) ---
+export function subscribeToChanges(onUpdate: () => void) {
+  return supabase
+    .channel("expenses-realtime")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "expenses" },
+      () => onUpdate()
+    )
+    .subscribe();
+}
+
+// --- Pure helpers ---
 
 export function getTodayString(): string {
   return new Date().toISOString().split("T")[0];
