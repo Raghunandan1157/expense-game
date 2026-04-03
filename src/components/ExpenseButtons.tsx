@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Category, CATEGORIES } from "@/lib/types";
+import { Category, CATEGORIES, ExpenseEntry } from "@/lib/types";
 import { canUseCategory, getCategoryUsagesToday } from "@/lib/storage";
 
 interface Props {
   onSpend: (category: Category) => void;
+  entries: ExpenseEntry[];
   refreshKey: number;
 }
 
@@ -32,7 +33,7 @@ const NEON_COLORS: Record<Category, { color: string; glow: string; ring: string 
   },
 };
 
-export default function ExpenseButtons({ onSpend, refreshKey }: Props) {
+export default function ExpenseButtons({ onSpend, entries, refreshKey }: Props) {
   const categories = Object.entries(CATEGORIES) as [
     Category,
     (typeof CATEGORIES)[Category]
@@ -41,8 +42,8 @@ export default function ExpenseButtons({ onSpend, refreshKey }: Props) {
   return (
     <div className="grid grid-cols-2 gap-5">
       {categories.map(([key, cat], i) => {
-        const usable = canUseCategory(key);
-        const usedToday = getCategoryUsagesToday(key);
+        const usable = canUseCategory(key, entries);
+        const usedToday = getCategoryUsagesToday(key, entries);
         const isUnlimited = cat.limit === null;
         const neon = NEON_COLORS[key];
 

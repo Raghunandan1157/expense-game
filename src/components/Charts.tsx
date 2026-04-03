@@ -14,7 +14,7 @@ import {
   Area,
   AreaChart,
 } from "recharts";
-import { DailyData } from "@/lib/types";
+import { DailyData, ExpenseEntry } from "@/lib/types";
 import {
   getWeeklyTotals,
   getMonthlyTotals,
@@ -111,14 +111,14 @@ function formatLabel(date: string, view: View): string {
   return date.slice(5); // MM-DD
 }
 
-export default function Charts({ refreshKey }: { refreshKey: number }) {
+export default function Charts({ refreshKey, entries }: { refreshKey: number; entries: ExpenseEntry[] }) {
   const [view, setView] = useState<View>("minute");
 
-  const daily = getDailyTotals();
-  const weekly = getWeeklyTotals();
-  const monthly = getMonthlyTotals();
-  const minuteData = getMinuteTotals();
-  const hourlyData = getHourlyTotals();
+  const daily = getDailyTotals(entries);
+  const weekly = getWeeklyTotals(entries);
+  const monthly = getMonthlyTotals(entries);
+  const minuteData = getMinuteTotals(entries);
+  const hourlyData = getHourlyTotals(entries);
 
   const activeColor = VIEW_META[view].color;
 
