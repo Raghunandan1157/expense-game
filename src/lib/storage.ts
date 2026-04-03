@@ -61,10 +61,7 @@ export function subscribeToChanges(onUpdate: () => void) {
     )
     .subscribe();
 
-  // Polling fallback every 5s in case realtime hiccups
-  const interval = setInterval(onUpdate, 5000);
-
-  return { channel, interval };
+  return channel;
 }
 
 // --- Pure helpers ---

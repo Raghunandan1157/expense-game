@@ -27,14 +27,11 @@ export default function Home() {
     setLoading(false);
   }, []);
 
-  // Fetch on mount + subscribe to realtime changes + polling fallback
+  // Fetch on mount + subscribe to realtime changes
   useEffect(() => {
     loadData();
-    const { channel, interval } = subscribeToChanges(() => loadData());
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(interval);
-    };
+    const channel = subscribeToChanges(() => loadData());
+    return () => { supabase.removeChannel(channel); };
   }, [loadData]);
 
   const CATEGORY_COLORS: Record<Category, string> = {
